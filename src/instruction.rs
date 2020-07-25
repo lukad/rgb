@@ -131,6 +131,10 @@ impl Instruction {
             0xDA => Instruction::Jp(JumpCondition::Carry),
             0xE9 => Instruction::Jp(JumpCondition::Always(JumpTarget::HLA)),
             0xF2 => Instruction::Ld(LoadType::Byte(LoadByteTarget::A, LoadByteSource::CA)),
+            0xEA => Instruction::Ld(LoadType::Byte(
+                LoadByteTarget::ImmediateAddress,
+                LoadByteSource::A,
+            )),
             0xFA => Instruction::Ld(LoadType::Byte(
                 LoadByteTarget::A,
                 LoadByteSource::ImmediateAddress,
@@ -227,6 +231,7 @@ pub enum LoadByteTarget {
     E,
     H,
     L,
+    ImmediateAddress,
     BCA,
     DEA,
     HLA,
@@ -359,6 +364,7 @@ impl std::fmt::Debug for LoadByteTarget {
             LoadByteTarget::E => "E",
             LoadByteTarget::H => "H",
             LoadByteTarget::L => "L",
+            LoadByteTarget::ImmediateAddress => "(a16)",
             LoadByteTarget::BCA => "(BC)",
             LoadByteTarget::DEA => "(DE)",
             LoadByteTarget::HLA => "(HL)",

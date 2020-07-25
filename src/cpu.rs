@@ -275,7 +275,7 @@ impl CPU {
                     LoadByteSource::ImmediateAddress => {
                         let addr = self.immediate_word();
                         next_pc += 2;
-                        cycles += 4;
+                        cycles += 12;
                         self.bus.read_byte(addr)
                     }
                     LoadByteSource::CA => {
@@ -318,6 +318,12 @@ impl CPU {
                     LoadByteTarget::E => &mut self.registers.b,
                     LoadByteTarget::H => &mut self.registers.b,
                     LoadByteTarget::L => &mut self.registers.b,
+                    LoadByteTarget::ImmediateAddress => {
+                        cycles += 12;
+                        let addr = self.immediate_word();
+                        next_pc += 2;
+                        self.bus.get_mut_byte(addr)
+                    }
                     LoadByteTarget::BCA => {
                         cycles += 4;
                         self.bus.get_mut_byte(self.registers.get_bc())
