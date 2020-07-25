@@ -1,11 +1,12 @@
 pub enum Instruction {
     Nop,
-    Add(AddType),
+    Add(ArithmeticTarget),
     Inc(IncDecType),
     Jp(JumpCondition),
     Ld(LoadType),
     Di,
-    Adc(AdcType),
+    Adc(ArithmeticTarget),
+    Xor(ArithmeticTarget),
 }
 
 impl Instruction {
@@ -110,27 +111,35 @@ impl Instruction {
             0x7D => Instruction::Ld(LoadType::Byte(LoadByteTarget::A, LoadByteSource::L)),
             0x7E => Instruction::Ld(LoadType::Byte(LoadByteTarget::A, LoadByteSource::HLA)),
             0x7F => Instruction::Ld(LoadType::Byte(LoadByteTarget::A, LoadByteSource::A)),
-            0x80 => Instruction::Add(AddType::Arithmetic(ArithmeticTarget::B)),
-            0x81 => Instruction::Add(AddType::Arithmetic(ArithmeticTarget::C)),
-            0x82 => Instruction::Add(AddType::Arithmetic(ArithmeticTarget::D)),
-            0x83 => Instruction::Add(AddType::Arithmetic(ArithmeticTarget::E)),
-            0x84 => Instruction::Add(AddType::Arithmetic(ArithmeticTarget::H)),
-            0x85 => Instruction::Add(AddType::Arithmetic(ArithmeticTarget::L)),
-            0x86 => Instruction::Add(AddType::Arithmetic(ArithmeticTarget::HLA)),
-            0x87 => Instruction::Add(AddType::Arithmetic(ArithmeticTarget::A)),
-            0x88 => Instruction::Adc(AdcType::Arithmetic(ArithmeticTarget::B)),
-            0x89 => Instruction::Adc(AdcType::Arithmetic(ArithmeticTarget::C)),
-            0x8A => Instruction::Adc(AdcType::Arithmetic(ArithmeticTarget::D)),
-            0x8B => Instruction::Adc(AdcType::Arithmetic(ArithmeticTarget::E)),
-            0x8C => Instruction::Adc(AdcType::Arithmetic(ArithmeticTarget::H)),
-            0x8D => Instruction::Adc(AdcType::Arithmetic(ArithmeticTarget::L)),
-            0x8E => Instruction::Adc(AdcType::Arithmetic(ArithmeticTarget::HLA)),
-            0x8F => Instruction::Adc(AdcType::Arithmetic(ArithmeticTarget::A)),
+            0x80 => Instruction::Add(ArithmeticTarget::B),
+            0x81 => Instruction::Add(ArithmeticTarget::C),
+            0x82 => Instruction::Add(ArithmeticTarget::D),
+            0x83 => Instruction::Add(ArithmeticTarget::E),
+            0x84 => Instruction::Add(ArithmeticTarget::H),
+            0x85 => Instruction::Add(ArithmeticTarget::L),
+            0x86 => Instruction::Add(ArithmeticTarget::HLA),
+            0x87 => Instruction::Add(ArithmeticTarget::A),
+            0x88 => Instruction::Adc(ArithmeticTarget::B),
+            0x89 => Instruction::Adc(ArithmeticTarget::C),
+            0x8A => Instruction::Adc(ArithmeticTarget::D),
+            0x8B => Instruction::Adc(ArithmeticTarget::E),
+            0x8C => Instruction::Adc(ArithmeticTarget::H),
+            0x8D => Instruction::Adc(ArithmeticTarget::L),
+            0x8E => Instruction::Adc(ArithmeticTarget::HLA),
+            0x8F => Instruction::Adc(ArithmeticTarget::A),
+            0xA8 => Instruction::Xor(ArithmeticTarget::B),
+            0xA9 => Instruction::Xor(ArithmeticTarget::C),
+            0xAA => Instruction::Xor(ArithmeticTarget::D),
+            0xAB => Instruction::Xor(ArithmeticTarget::E),
+            0xAC => Instruction::Xor(ArithmeticTarget::H),
+            0xAD => Instruction::Xor(ArithmeticTarget::L),
+            0xAE => Instruction::Xor(ArithmeticTarget::HLA),
+            0xAF => Instruction::Xor(ArithmeticTarget::A),
             0xC2 => Instruction::Jp(JumpCondition::NotZero),
             0xC3 => Instruction::Jp(JumpCondition::Always(JumpTarget::Immediate)),
-            0xC6 => Instruction::Add(AddType::ImmediateByte),
+            0xC6 => Instruction::Add(ArithmeticTarget::Immediate),
             0xCA => Instruction::Jp(JumpCondition::Zero),
-            0xCE => Instruction::Adc(AdcType::ImmediateByte),
+            0xCE => Instruction::Adc(ArithmeticTarget::Immediate),
             0xD2 => Instruction::Jp(JumpCondition::NotCarry),
             0xDA => Instruction::Jp(JumpCondition::Carry),
             0xE9 => Instruction::Jp(JumpCondition::Always(JumpTarget::HLA)),
@@ -139,6 +148,7 @@ impl Instruction {
                 LoadByteTarget::ImmediateAddress,
                 LoadByteSource::A,
             )),
+            0xEE => Instruction::Xor(ArithmeticTarget::Immediate),
             0xFA => Instruction::Ld(LoadType::Byte(
                 LoadByteTarget::A,
                 LoadByteSource::ImmediateAddress,
@@ -151,11 +161,6 @@ impl Instruction {
         };
         Some(ins)
     }
-}
-
-pub enum AddType {
-    Arithmetic(ArithmeticTarget),
-    ImmediateByte,
 }
 
 pub enum IncDecType {
@@ -172,6 +177,7 @@ pub enum ArithmeticTarget {
     H,
     L,
     HLA,
+    Immediate,
 }
 
 pub enum IncDecByteTarget {
@@ -251,27 +257,17 @@ pub enum LoadWordSource {
     SP,
 }
 
-pub enum AdcType {
-    Arithmetic(ArithmeticTarget),
-    ImmediateByte,
-}
-
 impl std::fmt::Debug for Instruction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Instruction::Nop => f.write_str("NOP"),
-            Instruction::Add(AddType::ImmediateByte) => f.write_str("ADC A, d8"),
-            Instruction::Add(AddType::Arithmetic(target)) => {
-                f.write_fmt(format_args!("ADD A, {:?}", target))
-            }
+            Instruction::Add(target) => f.write_fmt(format_args!("ADD A, {:?}", target)),
             Instruction::Inc(inc_dec_type) => f.write_fmt(format_args!("INC {:?}", inc_dec_type)),
             Instruction::Jp(jump_condition) => f.write_fmt(format_args!("JP {:?}", jump_condition)),
             Instruction::Ld(load_type) => f.write_fmt(format_args!("LD {:?}", load_type)),
             Instruction::Di => f.write_str("DI"),
-            Instruction::Adc(AdcType::ImmediateByte) => f.write_str("ADC A, d8"),
-            Instruction::Adc(AdcType::Arithmetic(target)) => {
-                f.write_fmt(format_args!("ADC A, {:?}", target))
-            }
+            Instruction::Adc(target) => f.write_fmt(format_args!("ADC A, {:?}", target)),
+            Instruction::Xor(target) => f.write_fmt(format_args!("XOR {:?}", target)),
         }
     }
 }
@@ -287,6 +283,7 @@ impl std::fmt::Debug for ArithmeticTarget {
             ArithmeticTarget::H => "H",
             ArithmeticTarget::L => "L",
             ArithmeticTarget::HLA => "(HL)",
+            ArithmeticTarget::Immediate => "a8",
         };
         f.write_str(value)
     }
