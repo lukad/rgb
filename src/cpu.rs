@@ -9,22 +9,22 @@ use std::io;
 
 #[derive(Default)]
 struct Flags {
-    zero: bool,
-    subtract: bool,
-    half_carry: bool,
-    carry: bool,
+    pub zero: bool,
+    pub subtract: bool,
+    pub half_carry: bool,
+    pub carry: bool,
 }
 
 #[derive(Default)]
 struct Registers {
-    a: u8,
-    b: u8,
-    c: u8,
-    d: u8,
-    e: u8,
-    f: Flags,
-    h: u8,
-    l: u8,
+    pub a: u8,
+    pub b: u8,
+    pub c: u8,
+    pub d: u8,
+    pub e: u8,
+    pub f: Flags,
+    pub h: u8,
+    pub l: u8,
 }
 
 pub struct CPU {
@@ -144,13 +144,36 @@ impl CPU {
                     IncDecWordTarget::BC => (&mut self.registers.b, &mut self.registers.c),
                     IncDecWordTarget::DE => (&mut self.registers.d, &mut self.registers.e),
                     IncDecWordTarget::HL => (&mut self.registers.h, &mut self.registers.l),
-                    _ => unreachable!(),
+                    IncDecWordTarget::SP => unreachable!(),
                 };
                 let combined = ((*high as u16) << 8) | (*low as u16);
                 let result = combined.wrapping_add(1);
                 *high = (result >> 8) as u8;
                 *low = (result & 0xFF) as u8;
                 8
+            }
+            Instruction::Jp(JumpCondition::Always(target)) => {
+                next_pc = match target {
+                    JumpTarget::Immediate => self.bus.read_word(next_pc),
+                    JumpTarget::HLI => self.bus.read_word(self.registers.get_hl()),
+                };
+                16
+            }
+            Instruction::Jp(jump_condition) => {
+                let condition = match jump_condition {
+                    JumpCondition::Carry => self.registers.f.carry,
+                    JumpCondition::NotCarry => !self.registers.f.carry,
+                    JumpCondition::Zero => self.registers.f.zero,
+                    JumpCondition::NotZero => !self.registers.f.zero,
+                    JumpCondition::Always(_) => unreachable!(),
+                };
+                if condition {
+                    next_pc = self.bus.read_word(next_pc);
+                    16
+                } else {
+                    next_pc += 2;
+                    12
+                }
             }
         };
 

@@ -2,6 +2,7 @@ pub enum Instruction {
     Nop,
     Add(AddType),
     Inc(IncDecType),
+    Jp(JumpCondition),
 }
 
 impl Instruction {
@@ -28,7 +29,13 @@ impl Instruction {
             0x85 => Instruction::Add(AddType::Arithmetic(ArithmeticTarget::L)),
             0x86 => Instruction::Add(AddType::Arithmetic(ArithmeticTarget::HLI)),
             0x87 => Instruction::Add(AddType::Arithmetic(ArithmeticTarget::A)),
+            0xC2 => Instruction::Jp(JumpCondition::NotZero),
+            0xC3 => Instruction::Jp(JumpCondition::Always(JumpTarget::Immediate)),
             0xC6 => Instruction::Add(AddType::ImmediateByte),
+            0xCA => Instruction::Jp(JumpCondition::Zero),
+            0xD2 => Instruction::Jp(JumpCondition::NotCarry),
+            0xDA => Instruction::Jp(JumpCondition::Carry),
+            0xE9 => Instruction::Jp(JumpCondition::Always(JumpTarget::HLI)),
             _ => todo!("Could not decode instruction: {:X}", byte),
         }
     }
@@ -71,4 +78,17 @@ pub enum IncDecWordTarget {
     DE,
     HL,
     SP,
+}
+
+pub enum JumpCondition {
+    NotZero,
+    Always(JumpTarget),
+    NotCarry,
+    Zero,
+    Carry,
+}
+
+pub enum JumpTarget {
+    Immediate,
+    HLI,
 }

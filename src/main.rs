@@ -13,6 +13,7 @@ fn main() {
     let rom_path = env::args().nth(1).expect("No rom specified");
     let mut file = File::open(rom_path).expect("Could not open rom file");
     cpu.load(&mut file);
-    cpu.step();
-    println!("Hello, world!");
+    loop {
+        cpu.step();
+    }
 }
