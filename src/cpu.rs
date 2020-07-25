@@ -52,6 +52,14 @@ impl Registers {
         ((self.h as u16) << 8) | (self.l as u16)
     }
 
+    fn set_bc(&mut self, value: u16) {
+        self.b = (value >> 8) as u8;
+        self.c = (value & 0xFF) as u8;
+    }
+    fn set_de(&mut self, value: u16) {
+        self.d = (value >> 8) as u8;
+        self.e = (value & 0xFF) as u8;
+    }
     fn set_hl(&mut self, value: u16) {
         self.h = (value >> 8) as u8;
         self.l = (value & 0xFF) as u8;
@@ -355,6 +363,16 @@ impl CPU {
                 *target = source;
 
                 cycles
+            }
+            Instruction::Ld(LoadType::Word(source)) => {
+                let value = self.immediate_word();
+                match source {
+                    LoadWordSource::BC => self.registers.set_bc(value),
+                    LoadWordSource::DE => self.registers.set_de(value),
+                    LoadWordSource::HL => self.registers.set_hl(value),
+                    LoadWordSource::SP => self.sp = value,
+                }
+                12
             }
             Instruction::Di => {
                 // TODO: Disable interrupts

@@ -12,6 +12,7 @@ impl Instruction {
     pub fn from_byte(byte: u8) -> Option<Self> {
         let ins = match byte {
             0x00 => Instruction::Nop,
+            0x01 => Instruction::Ld(LoadType::Word(LoadWordSource::BC)),
             0x02 => Instruction::Ld(LoadType::Byte(LoadByteTarget::BCA, LoadByteSource::A)),
             0x03 => Instruction::Inc(IncDecType::Word(IncDecWordTarget::BC)),
             0x04 => Instruction::Inc(IncDecType::Byte(IncDecByteTarget::B)),
@@ -19,6 +20,7 @@ impl Instruction {
             0x0A => Instruction::Ld(LoadType::Byte(LoadByteTarget::A, LoadByteSource::BCA)),
             0x0C => Instruction::Inc(IncDecType::Byte(IncDecByteTarget::C)),
             0x0E => Instruction::Ld(LoadType::Byte(LoadByteTarget::C, LoadByteSource::Immediate)),
+            0x11 => Instruction::Ld(LoadType::Word(LoadWordSource::DE)),
             0x12 => Instruction::Ld(LoadType::Byte(LoadByteTarget::DEA, LoadByteSource::A)),
             0x13 => Instruction::Inc(IncDecType::Word(IncDecWordTarget::DE)),
             0x14 => Instruction::Inc(IncDecType::Byte(IncDecByteTarget::D)),
@@ -26,6 +28,7 @@ impl Instruction {
             0x1A => Instruction::Ld(LoadType::Byte(LoadByteTarget::A, LoadByteSource::DEA)),
             0x1C => Instruction::Inc(IncDecType::Byte(IncDecByteTarget::E)),
             0x1E => Instruction::Ld(LoadType::Byte(LoadByteTarget::E, LoadByteSource::Immediate)),
+            0x21 => Instruction::Ld(LoadType::Word(LoadWordSource::HL)),
             0x22 => Instruction::Ld(LoadType::Byte(LoadByteTarget::HLIA, LoadByteSource::A)),
             0x23 => Instruction::Inc(IncDecType::Word(IncDecWordTarget::HL)),
             0x24 => Instruction::Inc(IncDecType::Byte(IncDecByteTarget::H)),
@@ -33,6 +36,7 @@ impl Instruction {
             0x2A => Instruction::Ld(LoadType::Byte(LoadByteTarget::A, LoadByteSource::HLIA)),
             0x2C => Instruction::Inc(IncDecType::Byte(IncDecByteTarget::L)),
             0x2E => Instruction::Ld(LoadType::Byte(LoadByteTarget::L, LoadByteSource::Immediate)),
+            0x31 => Instruction::Ld(LoadType::Word(LoadWordSource::SP)),
             0x32 => Instruction::Ld(LoadType::Byte(LoadByteTarget::HLDA, LoadByteSource::A)),
             0x33 => Instruction::Inc(IncDecType::Word(IncDecWordTarget::SP)),
             0x34 => Instruction::Inc(IncDecType::Byte(IncDecByteTarget::HLA)),
@@ -203,6 +207,7 @@ pub enum JumpTarget {
 
 pub enum LoadType {
     Byte(LoadByteTarget, LoadByteSource),
+    Word(LoadWordSource),
 }
 
 pub enum LoadByteSource {
@@ -237,6 +242,13 @@ pub enum LoadByteTarget {
     HLA,
     HLIA,
     HLDA,
+}
+
+pub enum LoadWordSource {
+    BC,
+    DE,
+    HL,
+    SP,
 }
 
 pub enum AdcType {
@@ -327,6 +339,7 @@ impl std::fmt::Debug for LoadType {
             LoadType::Byte(target, source) => {
                 f.write_fmt(format_args!("{:?}, {:?}", target, source))
             }
+            LoadType::Word(source) => f.write_fmt(format_args!("{:?}, d16", source)),
         }
     }
 }
@@ -370,6 +383,18 @@ impl std::fmt::Debug for LoadByteTarget {
             LoadByteTarget::HLA => "(HL)",
             LoadByteTarget::HLIA => "(HL+)",
             LoadByteTarget::HLDA => "(HL-)",
+        };
+        f.write_str(value)
+    }
+}
+
+impl std::fmt::Debug for LoadWordSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let value = match self {
+            LoadWordSource::BC => "BC",
+            LoadWordSource::DE => "DE",
+            LoadWordSource::HL => "HL",
+            LoadWordSource::SP => "SP",
         };
         f.write_str(value)
     }
