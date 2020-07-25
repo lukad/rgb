@@ -36,7 +36,7 @@ impl Instruction {
             0xD2 => Instruction::Jp(JumpCondition::NotCarry),
             0xDA => Instruction::Jp(JumpCondition::Carry),
             0xE9 => Instruction::Jp(JumpCondition::Always(JumpTarget::HLI)),
-            _ => todo!("Could not decode instruction: {:X}", byte),
+            _ => todo!("Could not decode instruction: {:#X}", byte),
         }
     }
 }

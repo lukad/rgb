@@ -15,7 +15,6 @@ struct Flags {
     pub carry: bool,
 }
 
-#[derive(Default)]
 struct Registers {
     pub a: u8,
     pub b: u8,
@@ -25,6 +24,21 @@ struct Registers {
     pub f: Flags,
     pub h: u8,
     pub l: u8,
+}
+
+impl Registers {
+    fn new() -> Self {
+        Self {
+            a: 0x01,
+            f: 0xB0.into(),
+            b: 0x00,
+            c: 0x13,
+            d: 0x00,
+            e: 0xD8,
+            h: 0x01,
+            l: 0x4D,
+        }
+    }
 }
 
 pub struct CPU {
@@ -63,9 +77,9 @@ impl std::convert::From<u8> for Flags {
 impl CPU {
     pub fn new() -> Self {
         Self {
-            pc: 0,
-            sp: 0,
-            registers: Default::default(),
+            pc: 0x1000,
+            sp: 0xFFFE,
+            registers: Registers::new(),
             bus: MemoryBus::new(),
         }
     }
