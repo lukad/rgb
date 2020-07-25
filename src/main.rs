@@ -20,6 +20,9 @@ fn main() {
     let mut file = File::open(rom_path).expect("Could not open rom file");
     cpu.load(&mut file);
     loop {
-        cpu.step();
+        if let Err(msg) = cpu.step() {
+            error!("{}", msg);
+            break;
+        }
     }
 }

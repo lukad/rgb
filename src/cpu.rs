@@ -39,6 +39,23 @@ impl Registers {
             l: 0x4D,
         }
     }
+
+    fn get_bc(&self) -> u16 {
+        ((self.h as u16) << 8) | (self.l as u16)
+    }
+
+    fn get_de(&self) -> u16 {
+        ((self.h as u16) << 8) | (self.l as u16)
+    }
+
+    fn get_hl(&self) -> u16 {
+        ((self.h as u16) << 8) | (self.l as u16)
+    }
+
+    fn set_hl(&mut self, value: u16) {
+        self.h = (value >> 8) as u8;
+        self.l = (value & 0xFF) as u8;
+    }
 }
 
 pub struct CPU {
@@ -46,12 +63,6 @@ pub struct CPU {
     sp: u16,
     registers: Registers,
     bus: MemoryBus,
-}
-
-impl Registers {
-    fn get_hl(&self) -> u16 {
-        ((self.h as u16) << 8) | (self.l as u16)
-    }
 }
 
 impl std::convert::From<Flags> for u8 {
@@ -88,12 +99,39 @@ impl CPU {
         self.bus.load(data);
     }
 
-    pub fn step(&mut self) {
+    pub fn step(&mut self) -> Result<(), String> {
         let byte = self.bus.read_byte(self.pc);
-        let instruction = Instruction::from_byte(byte);
-        trace!("{:#06X}: {:?}", self.pc, instruction);
-        let (new_pc, _cycles) = self.execute(instruction);
-        self.pc = new_pc;
+        if let Some(instruction) = Instruction::from_byte(byte) {
+            trace!("{:#06X}: {:?}", self.pc, instruction);
+            let (new_pc, _cycles) = self.execute(instruction);
+            self.pc = new_pc;
+            Ok(())
+        } else {
+            Err(format!(
+                "{:#06X}: {:#6X} - illegal instruction",
+                self.pc, byte
+            ))
+        }
+    }
+
+    fn get_bca(&mut self) -> u8 {
+        self.bus.read_byte(self.registers.get_bc())
+    }
+
+    fn get_dea(&mut self) -> u8 {
+        self.bus.read_byte(self.registers.get_de())
+    }
+
+    fn get_hla(&mut self) -> u8 {
+        self.bus.read_byte(self.registers.get_hl())
+    }
+
+    fn immediate_byte(&mut self) -> u8 {
+        self.bus.read_byte(self.pc.wrapping_add(1))
+    }
+
+    fn immediate_word(&mut self) -> u16 {
+        self.bus.read_word(self.pc.wrapping_add(1))
     }
 
     fn execute(&mut self, instruction: Instruction) -> (u16, usize) {
@@ -110,7 +148,7 @@ impl CPU {
                     AddType::Arithmetic(ArithmeticTarget::E) => self.registers.e,
                     AddType::Arithmetic(ArithmeticTarget::H) => self.registers.h,
                     AddType::Arithmetic(ArithmeticTarget::L) => self.registers.l,
-                    AddType::Arithmetic(ArithmeticTarget::HLI) => {
+                    AddType::Arithmetic(ArithmeticTarget::HLA) => {
                         self.bus.read_byte(self.registers.get_hl())
                     }
                     AddType::ImmediateByte => {
@@ -137,7 +175,7 @@ impl CPU {
                     IncDecByteTarget::E => &mut self.registers.e,
                     IncDecByteTarget::H => &mut self.registers.h,
                     IncDecByteTarget::L => &mut self.registers.l,
-                    IncDecByteTarget::HLI => {
+                    IncDecByteTarget::HLA => {
                         let hl = ((self.registers.h as u16) << 8) | (self.registers.l as u16);
                         self.bus.get_mut_byte(hl)
                     }
@@ -170,7 +208,7 @@ impl CPU {
             Instruction::Jp(JumpCondition::Always(target)) => {
                 next_pc = match target {
                     JumpTarget::Immediate => self.bus.read_word(next_pc),
-                    JumpTarget::HLI => self.bus.read_word(self.registers.get_hl()),
+                    JumpTarget::HLA => self.bus.read_word(self.registers.get_hl()),
                 };
                 16
             }
@@ -189,6 +227,100 @@ impl CPU {
                     next_pc += 2;
                     12
                 }
+            }
+            Instruction::Ld(LoadType::Byte(byte_target, byte_source)) => {
+                let mut cycles = 4;
+                let source = match byte_source {
+                    LoadByteSource::A => self.registers.a,
+                    LoadByteSource::B => self.registers.b,
+                    LoadByteSource::C => self.registers.c,
+                    LoadByteSource::D => self.registers.d,
+                    LoadByteSource::E => self.registers.e,
+                    LoadByteSource::H => self.registers.h,
+                    LoadByteSource::L => self.registers.l,
+                    LoadByteSource::Immediate => {
+                        let data = self.immediate_byte();
+                        next_pc += 1;
+                        cycles += 4;
+                        data
+                    }
+                    LoadByteSource::ImmediateAddress => {
+                        let addr = self.immediate_word();
+                        next_pc += 2;
+                        cycles += 4;
+                        self.bus.read_byte(addr)
+                    }
+                    LoadByteSource::CA => {
+                        cycles += 4;
+                        self.bus.read_byte(self.registers.a.into())
+                    }
+                    LoadByteSource::BCA => {
+                        cycles += 4;
+                        self.get_bca()
+                    }
+                    LoadByteSource::DEA => {
+                        cycles += 4;
+                        self.get_dea()
+                    }
+                    LoadByteSource::HLA => {
+                        cycles += 4;
+                        self.get_hla()
+                    }
+                    LoadByteSource::HLIA => {
+                        cycles += 4;
+                        let data = self.get_hla();
+                        self.registers
+                            .set_hl(self.registers.get_hl().wrapping_add(1));
+                        data
+                    }
+                    LoadByteSource::HLDA => {
+                        cycles += 4;
+                        let data = self.get_hla();
+                        self.registers
+                            .set_hl(self.registers.get_hl().wrapping_sub(1));
+                        data
+                    }
+                }
+                .clone();
+                let target = match byte_target {
+                    LoadByteTarget::A => &mut self.registers.a,
+                    LoadByteTarget::B => &mut self.registers.b,
+                    LoadByteTarget::C => &mut self.registers.b,
+                    LoadByteTarget::D => &mut self.registers.b,
+                    LoadByteTarget::E => &mut self.registers.b,
+                    LoadByteTarget::H => &mut self.registers.b,
+                    LoadByteTarget::L => &mut self.registers.b,
+                    LoadByteTarget::BCA => {
+                        cycles += 4;
+                        self.bus.get_mut_byte(self.registers.get_bc())
+                    }
+                    LoadByteTarget::DEA => {
+                        cycles += 4;
+                        self.bus.get_mut_byte(self.registers.get_de())
+                    }
+                    LoadByteTarget::HLA => {
+                        cycles += 4;
+                        self.bus.get_mut_byte(self.registers.get_hl())
+                    }
+                    LoadByteTarget::HLIA => {
+                        cycles += 4;
+                        let data = self.bus.get_mut_byte(self.registers.get_hl());
+                        self.registers
+                            .set_hl(self.registers.get_hl().wrapping_add(1));
+                        data
+                    }
+                    LoadByteTarget::HLDA => {
+                        cycles += 4;
+                        let data = self.bus.get_mut_byte(self.registers.get_hl());
+                        self.registers
+                            .set_hl(self.registers.get_hl().wrapping_sub(1));
+                        data
+                    }
+                };
+
+                *target = source;
+
+                cycles
             }
         };
 
