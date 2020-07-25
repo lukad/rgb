@@ -1,3 +1,5 @@
+use std::io;
+
 use crate::gpu::GPU;
 
 pub struct MemoryBus {
@@ -21,6 +23,10 @@ impl MemoryBus {
 }
 
 impl MemoryBus {
+    pub fn load<R: io::Read>(&mut self, data: &mut R) {
+        data.read(self.rom.as_mut()).expect("Could not load data");
+    }
+
     pub fn read_byte(&self, address: u16) -> u8 {
         let addr = address as usize;
         match addr & 0xF000 {

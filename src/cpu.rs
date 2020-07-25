@@ -5,6 +5,7 @@ const CARRY_FLAG_POSITION: u8 = 4;
 
 use crate::instruction::*;
 use crate::memory_bus::MemoryBus;
+use std::io;
 
 #[derive(Default)]
 struct Flags {
@@ -67,6 +68,10 @@ impl CPU {
             registers: Default::default(),
             bus: MemoryBus::new(),
         }
+    }
+
+    pub fn load<R: io::Read>(&mut self, data: &mut R) {
+        self.bus.load(data);
     }
 
     pub fn step(&mut self) {

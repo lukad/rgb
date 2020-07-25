@@ -29,7 +29,7 @@ impl Instruction {
             0x86 => Instruction::Add(AddType::Arithmetic(ArithmeticTarget::HLI)),
             0x87 => Instruction::Add(AddType::Arithmetic(ArithmeticTarget::A)),
             0xC6 => Instruction::Add(AddType::ImmediateByte),
-            _ => todo!("Could not decode instruction: {:?}", byte),
+            _ => todo!("Could not decode instruction: {:X}", byte),
         }
     }
 }
