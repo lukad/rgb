@@ -77,7 +77,7 @@ impl std::convert::From<u8> for Flags {
 impl CPU {
     pub fn new() -> Self {
         Self {
-            pc: 0x1000,
+            pc: 0x0100,
             sp: 0xFFFE,
             registers: Registers::new(),
             bus: MemoryBus::new(),
@@ -91,6 +91,7 @@ impl CPU {
     pub fn step(&mut self) {
         let byte = self.bus.read_byte(self.pc);
         let instruction = Instruction::from_byte(byte);
+        trace!("{:#06X}: {:?}", self.pc, instruction);
         let (new_pc, _cycles) = self.execute(instruction);
         self.pc = new_pc;
     }

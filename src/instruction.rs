@@ -92,3 +92,72 @@ pub enum JumpTarget {
     Immediate,
     HLI,
 }
+
+impl std::fmt::Debug for Instruction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Instruction::Nop => f.write_str("NOP"),
+            Instruction::Add(add_type) => f.write_fmt(format_args!("ADD A, {:?}", add_type)),
+            Instruction::Inc(inc_dec_type) => f.write_fmt(format_args!("INC {:?}", inc_dec_type)),
+            Instruction::Jp(jump_condition) => f.write_fmt(format_args!("JP {:?}", jump_condition)),
+        }
+    }
+}
+
+impl std::fmt::Debug for AddType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let value = match self {
+            AddType::Arithmetic(ArithmeticTarget::A) => "A",
+            AddType::Arithmetic(ArithmeticTarget::B) => "B",
+            AddType::Arithmetic(ArithmeticTarget::C) => "C",
+            AddType::Arithmetic(ArithmeticTarget::D) => "D",
+            AddType::Arithmetic(ArithmeticTarget::E) => "E",
+            AddType::Arithmetic(ArithmeticTarget::H) => "H",
+            AddType::Arithmetic(ArithmeticTarget::L) => "L",
+            AddType::Arithmetic(ArithmeticTarget::HLI) => "(HLI)",
+            AddType::ImmediateByte => "d8",
+        };
+        f.write_str(value)
+    }
+}
+
+impl std::fmt::Debug for IncDecType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let value = match self {
+            IncDecType::Byte(IncDecByteTarget::A) => "A",
+            IncDecType::Byte(IncDecByteTarget::B) => "B",
+            IncDecType::Byte(IncDecByteTarget::C) => "C",
+            IncDecType::Byte(IncDecByteTarget::D) => "D",
+            IncDecType::Byte(IncDecByteTarget::E) => "E",
+            IncDecType::Byte(IncDecByteTarget::H) => "H",
+            IncDecType::Byte(IncDecByteTarget::L) => "L",
+            IncDecType::Byte(IncDecByteTarget::HLI) => "(HLI)",
+            IncDecType::Word(IncDecWordTarget::BC) => "BC",
+            IncDecType::Word(IncDecWordTarget::DE) => "DE",
+            IncDecType::Word(IncDecWordTarget::HL) => "HL",
+            IncDecType::Word(IncDecWordTarget::SP) => "SP",
+        };
+        f.write_str(value)
+    }
+}
+
+impl std::fmt::Debug for JumpCondition {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            JumpCondition::NotZero => f.write_str("NZ, a16"),
+            JumpCondition::Always(target) => f.write_fmt(format_args!("{:?}", target)),
+            JumpCondition::NotCarry => f.write_str("NC, a16"),
+            JumpCondition::Zero => f.write_str("Z, a16"),
+            JumpCondition::Carry => f.write_str("C, a16"),
+        }
+    }
+}
+
+impl std::fmt::Debug for JumpTarget {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            JumpTarget::Immediate => f.write_str("a16"),
+            JumpTarget::HLI => f.write_str("(HLI)"),
+        }
+    }
+}
