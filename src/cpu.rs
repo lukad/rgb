@@ -226,6 +226,7 @@ impl CPU {
                 cycles
             }
             Instruction::Inc(IncDecType::Byte(target)) => {
+                let mut cycles = 4;
                 let register = match target {
                     IncDecByteTarget::A => &mut self.registers.a,
                     IncDecByteTarget::B => &mut self.registers.b,
@@ -235,17 +236,17 @@ impl CPU {
                     IncDecByteTarget::H => &mut self.registers.h,
                     IncDecByteTarget::L => &mut self.registers.l,
                     IncDecByteTarget::HLA => {
+                        cycles = 12;
                         let hl = ((self.registers.h as u16) << 8) | (self.registers.l as u16);
                         self.bus.get_mut_byte(hl)
                     }
                 };
-                let (result, overflow) = register.overflowing_add(1);
+                let result = register.wrapping_add(1);
                 self.registers.f.zero = result == 0;
                 self.registers.f.subtract = false;
-                self.registers.f.carry = overflow;
-                self.registers.f.half_carry = (*register & 0xF) + (result & 0xF) > 0xF;
+                self.registers.f.half_carry = (*register & 0xF) + (result & 0xF) & 0x10 != 0;
                 *register = result;
-                4
+                cycles
             }
             Instruction::Inc(IncDecType::Word(IncDecWordTarget::SP)) => {
                 self.sp = self.sp.wrapping_add(1);
@@ -260,6 +261,46 @@ impl CPU {
                 };
                 let combined = ((*high as u16) << 8) | (*low as u16);
                 let result = combined.wrapping_add(1);
+                *high = (result >> 8) as u8;
+                *low = (result & 0xFF) as u8;
+                8
+            }
+            Instruction::Dec(IncDecType::Byte(target)) => {
+                let mut cycles = 4;
+                let register = match target {
+                    IncDecByteTarget::A => &mut self.registers.a,
+                    IncDecByteTarget::B => &mut self.registers.b,
+                    IncDecByteTarget::C => &mut self.registers.c,
+                    IncDecByteTarget::D => &mut self.registers.d,
+                    IncDecByteTarget::E => &mut self.registers.e,
+                    IncDecByteTarget::H => &mut self.registers.h,
+                    IncDecByteTarget::L => &mut self.registers.l,
+                    IncDecByteTarget::HLA => {
+                        cycles = 12;
+                        let hl = ((self.registers.h as u16) << 8) | (self.registers.l as u16);
+                        self.bus.get_mut_byte(hl)
+                    }
+                };
+                let result = register.wrapping_sub(1);
+                self.registers.f.zero = result == 0;
+                self.registers.f.subtract = true;
+                self.registers.f.half_carry = (*register & 0xF) + (result & 0xF) & 0x10 != 0;
+                *register = result;
+                cycles
+            }
+            Instruction::Dec(IncDecType::Word(IncDecWordTarget::SP)) => {
+                self.sp = self.sp.wrapping_sub(1);
+                8
+            }
+            Instruction::Dec(IncDecType::Word(target)) => {
+                let (high, low) = match target {
+                    IncDecWordTarget::BC => (&mut self.registers.b, &mut self.registers.c),
+                    IncDecWordTarget::DE => (&mut self.registers.d, &mut self.registers.e),
+                    IncDecWordTarget::HL => (&mut self.registers.h, &mut self.registers.l),
+                    IncDecWordTarget::SP => unreachable!(),
+                };
+                let combined = ((*high as u16) << 8) | (*low as u16);
+                let result = combined.wrapping_sub(1);
                 *high = (result >> 8) as u8;
                 *low = (result & 0xFF) as u8;
                 8

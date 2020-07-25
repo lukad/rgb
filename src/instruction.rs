@@ -2,6 +2,7 @@ pub enum Instruction {
     Nop,
     Add(ArithmeticTarget),
     Inc(IncDecType),
+    Dec(IncDecType),
     Jp(JumpCondition),
     Ld(LoadType),
     Di,
@@ -17,35 +18,43 @@ impl Instruction {
             0x02 => Instruction::Ld(LoadType::Byte(LoadByteTarget::BCA, LoadByteSource::A)),
             0x03 => Instruction::Inc(IncDecType::Word(IncDecWordTarget::BC)),
             0x04 => Instruction::Inc(IncDecType::Byte(IncDecByteTarget::B)),
+            0x05 => Instruction::Dec(IncDecType::Byte(IncDecByteTarget::B)),
             0x06 => Instruction::Ld(LoadType::Byte(LoadByteTarget::B, LoadByteSource::Immediate)),
             0x0A => Instruction::Ld(LoadType::Byte(LoadByteTarget::A, LoadByteSource::BCA)),
+            0x0B => Instruction::Dec(IncDecType::Word(IncDecWordTarget::BC)),
             0x0C => Instruction::Inc(IncDecType::Byte(IncDecByteTarget::C)),
             0x0E => Instruction::Ld(LoadType::Byte(LoadByteTarget::C, LoadByteSource::Immediate)),
             0x11 => Instruction::Ld(LoadType::Word(LoadWordSource::DE)),
             0x12 => Instruction::Ld(LoadType::Byte(LoadByteTarget::DEA, LoadByteSource::A)),
             0x13 => Instruction::Inc(IncDecType::Word(IncDecWordTarget::DE)),
             0x14 => Instruction::Inc(IncDecType::Byte(IncDecByteTarget::D)),
+            0x15 => Instruction::Dec(IncDecType::Byte(IncDecByteTarget::D)),
             0x16 => Instruction::Ld(LoadType::Byte(LoadByteTarget::D, LoadByteSource::Immediate)),
             0x1A => Instruction::Ld(LoadType::Byte(LoadByteTarget::A, LoadByteSource::DEA)),
+            0x1B => Instruction::Dec(IncDecType::Word(IncDecWordTarget::DE)),
             0x1C => Instruction::Inc(IncDecType::Byte(IncDecByteTarget::E)),
             0x1E => Instruction::Ld(LoadType::Byte(LoadByteTarget::E, LoadByteSource::Immediate)),
             0x21 => Instruction::Ld(LoadType::Word(LoadWordSource::HL)),
             0x22 => Instruction::Ld(LoadType::Byte(LoadByteTarget::HLIA, LoadByteSource::A)),
             0x23 => Instruction::Inc(IncDecType::Word(IncDecWordTarget::HL)),
             0x24 => Instruction::Inc(IncDecType::Byte(IncDecByteTarget::H)),
+            0x25 => Instruction::Dec(IncDecType::Byte(IncDecByteTarget::H)),
             0x26 => Instruction::Ld(LoadType::Byte(LoadByteTarget::H, LoadByteSource::Immediate)),
             0x2A => Instruction::Ld(LoadType::Byte(LoadByteTarget::A, LoadByteSource::HLIA)),
+            0x2B => Instruction::Dec(IncDecType::Word(IncDecWordTarget::HL)),
             0x2C => Instruction::Inc(IncDecType::Byte(IncDecByteTarget::L)),
             0x2E => Instruction::Ld(LoadType::Byte(LoadByteTarget::L, LoadByteSource::Immediate)),
             0x31 => Instruction::Ld(LoadType::Word(LoadWordSource::SP)),
             0x32 => Instruction::Ld(LoadType::Byte(LoadByteTarget::HLDA, LoadByteSource::A)),
             0x33 => Instruction::Inc(IncDecType::Word(IncDecWordTarget::SP)),
             0x34 => Instruction::Inc(IncDecType::Byte(IncDecByteTarget::HLA)),
+            0x35 => Instruction::Dec(IncDecType::Byte(IncDecByteTarget::HLA)),
             0x36 => Instruction::Ld(LoadType::Byte(
                 LoadByteTarget::HLA,
                 LoadByteSource::Immediate,
             )),
             0x3A => Instruction::Ld(LoadType::Byte(LoadByteTarget::A, LoadByteSource::HLDA)),
+            0x3B => Instruction::Dec(IncDecType::Word(IncDecWordTarget::SP)),
             0x3C => Instruction::Inc(IncDecType::Byte(IncDecByteTarget::A)),
             0x3E => Instruction::Ld(LoadType::Byte(LoadByteTarget::A, LoadByteSource::Immediate)),
             0x40 => Instruction::Ld(LoadType::Byte(LoadByteTarget::B, LoadByteSource::B)),
@@ -157,7 +166,10 @@ impl Instruction {
             0xD3 | 0xDB | 0xDC | 0xE3 | 0xE4 | 0xEB | 0xEC | 0xED | 0xF4 | 0xFC | 0xFD => {
                 return None
             }
-            _ => todo!("Could not decode instruction: {:#X}", byte),
+            _ => {
+                error!("Could not decode instruction: {:#04X}", byte);
+                todo!("Could not decode instruction: {:#04X}", byte)
+            }
         };
         Some(ins)
     }
@@ -263,6 +275,7 @@ impl std::fmt::Debug for Instruction {
             Instruction::Nop => f.write_str("NOP"),
             Instruction::Add(target) => f.write_fmt(format_args!("ADD A, {:?}", target)),
             Instruction::Inc(inc_dec_type) => f.write_fmt(format_args!("INC {:?}", inc_dec_type)),
+            Instruction::Dec(inc_dec_type) => f.write_fmt(format_args!("DEC {:?}", inc_dec_type)),
             Instruction::Jp(jump_condition) => f.write_fmt(format_args!("JP {:?}", jump_condition)),
             Instruction::Ld(load_type) => f.write_fmt(format_args!("LD {:?}", load_type)),
             Instruction::Di => f.write_str("DI"),
