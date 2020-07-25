@@ -166,6 +166,34 @@ impl CPU {
                 self.registers.a = result;
                 cycles
             }
+            Instruction::Adc(target) => {
+                let mut cycles = 4;
+                let value = match target {
+                    AdcType::Arithmetic(ArithmeticTarget::A) => self.registers.a,
+                    AdcType::Arithmetic(ArithmeticTarget::B) => self.registers.b,
+                    AdcType::Arithmetic(ArithmeticTarget::C) => self.registers.c,
+                    AdcType::Arithmetic(ArithmeticTarget::D) => self.registers.d,
+                    AdcType::Arithmetic(ArithmeticTarget::E) => self.registers.e,
+                    AdcType::Arithmetic(ArithmeticTarget::H) => self.registers.h,
+                    AdcType::Arithmetic(ArithmeticTarget::L) => self.registers.l,
+                    AdcType::Arithmetic(ArithmeticTarget::HLA) => {
+                        self.bus.read_byte(self.registers.get_hl())
+                    }
+                    AdcType::ImmediateByte => {
+                        let value = self.bus.read_byte(self.pc);
+                        next_pc = next_pc.wrapping_add(1);
+                        cycles = 8;
+                        value
+                    }
+                };
+                let (result, overflow) = self.registers.a.overflowing_add(value);
+                self.registers.f.zero = result == 0;
+                self.registers.f.subtract = false;
+                self.registers.f.carry = overflow;
+                self.registers.f.half_carry = (self.registers.a & 0xF) + (result & 0xF) > 0xF;
+                self.registers.a = result.wrapping_add(overflow as u8);
+                cycles
+            }
             Instruction::Inc(IncDecType::Byte(target)) => {
                 let register = match target {
                     IncDecByteTarget::A => &mut self.registers.a,
@@ -321,6 +349,10 @@ impl CPU {
                 *target = source;
 
                 cycles
+            }
+            Instruction::Di => {
+                // TODO: Disable interrupts
+                4
             }
         };
 
