@@ -300,32 +300,50 @@ impl CPU {
                     IncDecWordTarget::SP => unreachable!(),
                 };
                 let combined = ((*high as u16) << 8) | (*low as u16);
-                let result = combined.wrapping_sub(1);
+                let result = combined.wrapping_add(1);
                 *high = (result >> 8) as u8;
                 *low = (result & 0xFF) as u8;
                 8
             }
-            Instruction::Jp(JumpCondition::Always(target)) => {
+            Instruction::Jp(Jump::Always(target)) => {
                 next_pc = match target {
                     JumpTarget::Immediate => self.bus.read_word(next_pc),
                     JumpTarget::HLA => self.bus.read_word(self.registers.get_hl()),
                 };
                 16
             }
-            Instruction::Jp(jump_condition) => {
+            Instruction::Jp(Jump::Conditional(jump_condition)) => {
                 let condition = match jump_condition {
                     JumpCondition::Carry => self.registers.f.carry,
                     JumpCondition::NotCarry => !self.registers.f.carry,
                     JumpCondition::Zero => self.registers.f.zero,
                     JumpCondition::NotZero => !self.registers.f.zero,
-                    JumpCondition::Always(_) => unreachable!(),
                 };
                 if condition {
-                    next_pc = self.bus.read_word(next_pc);
+                    next_pc = next_pc.wrapping_add(self.bus.read_word(next_pc));
                     16
                 } else {
-                    next_pc += 2;
+                    next_pc = next_pc.wrapping_add(2);
                     12
+                }
+            }
+            Instruction::Jr(JumpRelative::Always) => {
+                next_pc = next_pc.wrapping_add(self.bus.read_byte(next_pc) as u16);
+                12
+            }
+            Instruction::Jr(JumpRelative::Conditional(jump_condition)) => {
+                let condition = match jump_condition {
+                    JumpCondition::Carry => self.registers.f.carry,
+                    JumpCondition::NotCarry => !self.registers.f.carry,
+                    JumpCondition::Zero => self.registers.f.zero,
+                    JumpCondition::NotZero => !self.registers.f.zero,
+                };
+                if condition {
+                    next_pc = next_pc.wrapping_add(self.bus.read_byte(next_pc) as u16);
+                    12
+                } else {
+                    next_pc = next_pc.wrapping_add(1);
+                    8
                 }
             }
             Instruction::Ld(LoadType::Byte(byte_target, byte_source)) => {

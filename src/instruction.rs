@@ -3,7 +3,8 @@ pub enum Instruction {
     Add(ArithmeticTarget),
     Inc(IncDecType),
     Dec(IncDecType),
-    Jp(JumpCondition),
+    Jp(Jump),
+    Jr(JumpRelative),
     Ld(LoadType),
     Di,
     Adc(ArithmeticTarget),
@@ -30,20 +31,24 @@ impl Instruction {
             0x14 => Instruction::Inc(IncDecType::Byte(IncDecByteTarget::D)),
             0x15 => Instruction::Dec(IncDecType::Byte(IncDecByteTarget::D)),
             0x16 => Instruction::Ld(LoadType::Byte(LoadByteTarget::D, LoadByteSource::Immediate)),
+            0x18 => Instruction::Jr(JumpRelative::Always),
             0x1A => Instruction::Ld(LoadType::Byte(LoadByteTarget::A, LoadByteSource::DEA)),
             0x1B => Instruction::Dec(IncDecType::Word(IncDecWordTarget::DE)),
             0x1C => Instruction::Inc(IncDecType::Byte(IncDecByteTarget::E)),
             0x1E => Instruction::Ld(LoadType::Byte(LoadByteTarget::E, LoadByteSource::Immediate)),
+            0x20 => Instruction::Jr(JumpRelative::Conditional(JumpCondition::NotZero)),
             0x21 => Instruction::Ld(LoadType::Word(LoadWordSource::HL)),
             0x22 => Instruction::Ld(LoadType::Byte(LoadByteTarget::HLIA, LoadByteSource::A)),
             0x23 => Instruction::Inc(IncDecType::Word(IncDecWordTarget::HL)),
             0x24 => Instruction::Inc(IncDecType::Byte(IncDecByteTarget::H)),
             0x25 => Instruction::Dec(IncDecType::Byte(IncDecByteTarget::H)),
             0x26 => Instruction::Ld(LoadType::Byte(LoadByteTarget::H, LoadByteSource::Immediate)),
+            0x28 => Instruction::Jr(JumpRelative::Conditional(JumpCondition::Zero)),
             0x2A => Instruction::Ld(LoadType::Byte(LoadByteTarget::A, LoadByteSource::HLIA)),
             0x2B => Instruction::Dec(IncDecType::Word(IncDecWordTarget::HL)),
             0x2C => Instruction::Inc(IncDecType::Byte(IncDecByteTarget::L)),
             0x2E => Instruction::Ld(LoadType::Byte(LoadByteTarget::L, LoadByteSource::Immediate)),
+            0x30 => Instruction::Jr(JumpRelative::Conditional(JumpCondition::NotCarry)),
             0x31 => Instruction::Ld(LoadType::Word(LoadWordSource::SP)),
             0x32 => Instruction::Ld(LoadType::Byte(LoadByteTarget::HLDA, LoadByteSource::A)),
             0x33 => Instruction::Inc(IncDecType::Word(IncDecWordTarget::SP)),
@@ -53,6 +58,7 @@ impl Instruction {
                 LoadByteTarget::HLA,
                 LoadByteSource::Immediate,
             )),
+            0x38 => Instruction::Jr(JumpRelative::Conditional(JumpCondition::Carry)),
             0x3A => Instruction::Ld(LoadType::Byte(LoadByteTarget::A, LoadByteSource::HLDA)),
             0x3B => Instruction::Dec(IncDecType::Word(IncDecWordTarget::SP)),
             0x3C => Instruction::Inc(IncDecType::Byte(IncDecByteTarget::A)),
@@ -144,14 +150,14 @@ impl Instruction {
             0xAD => Instruction::Xor(ArithmeticTarget::L),
             0xAE => Instruction::Xor(ArithmeticTarget::HLA),
             0xAF => Instruction::Xor(ArithmeticTarget::A),
-            0xC2 => Instruction::Jp(JumpCondition::NotZero),
-            0xC3 => Instruction::Jp(JumpCondition::Always(JumpTarget::Immediate)),
+            0xC2 => Instruction::Jp(Jump::Conditional(JumpCondition::NotZero)),
+            0xC3 => Instruction::Jp(Jump::Always(JumpTarget::Immediate)),
             0xC6 => Instruction::Add(ArithmeticTarget::Immediate),
-            0xCA => Instruction::Jp(JumpCondition::Zero),
+            0xCA => Instruction::Jp(Jump::Conditional(JumpCondition::Zero)),
             0xCE => Instruction::Adc(ArithmeticTarget::Immediate),
-            0xD2 => Instruction::Jp(JumpCondition::NotCarry),
-            0xDA => Instruction::Jp(JumpCondition::Carry),
-            0xE9 => Instruction::Jp(JumpCondition::Always(JumpTarget::HLA)),
+            0xD2 => Instruction::Jp(Jump::Conditional(JumpCondition::NotCarry)),
+            0xDA => Instruction::Jp(Jump::Conditional(JumpCondition::Carry)),
+            0xE9 => Instruction::Jp(Jump::Always(JumpTarget::HLA)),
             0xF2 => Instruction::Ld(LoadType::Byte(LoadByteTarget::A, LoadByteSource::CA)),
             0xEA => Instruction::Ld(LoadType::Byte(
                 LoadByteTarget::ImmediateAddress,
@@ -210,9 +216,18 @@ pub enum IncDecWordTarget {
     SP,
 }
 
+pub enum Jump {
+    Conditional(JumpCondition),
+    Always(JumpTarget),
+}
+
+pub enum JumpRelative {
+    Conditional(JumpCondition),
+    Always,
+}
+
 pub enum JumpCondition {
     NotZero,
-    Always(JumpTarget),
     NotCarry,
     Zero,
     Carry,
@@ -276,7 +291,8 @@ impl std::fmt::Debug for Instruction {
             Instruction::Add(target) => f.write_fmt(format_args!("ADD A, {:?}", target)),
             Instruction::Inc(inc_dec_type) => f.write_fmt(format_args!("INC {:?}", inc_dec_type)),
             Instruction::Dec(inc_dec_type) => f.write_fmt(format_args!("DEC {:?}", inc_dec_type)),
-            Instruction::Jp(jump_condition) => f.write_fmt(format_args!("JP {:?}", jump_condition)),
+            Instruction::Jp(jump) => f.write_fmt(format_args!("JP {:?}", jump)),
+            Instruction::Jr(jump) => f.write_fmt(format_args!("JR {:?}", jump)),
             Instruction::Ld(load_type) => f.write_fmt(format_args!("LD {:?}", load_type)),
             Instruction::Di => f.write_str("DI"),
             Instruction::Adc(target) => f.write_fmt(format_args!("ADC A, {:?}", target)),
@@ -322,11 +338,28 @@ impl std::fmt::Debug for IncDecType {
     }
 }
 
+impl std::fmt::Debug for Jump {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Jump::Conditional(condition) => f.write_fmt(format_args!("{:?}", condition)),
+            Jump::Always(target) => f.write_fmt(format_args!("{:?}", target)),
+        }
+    }
+}
+
+impl std::fmt::Debug for JumpRelative {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            JumpRelative::Conditional(condition) => f.write_fmt(format_args!("{:?}", condition)),
+            JumpRelative::Always => f.write_str("r8"),
+        }
+    }
+}
+
 impl std::fmt::Debug for JumpCondition {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             JumpCondition::NotZero => f.write_str("NZ, a16"),
-            JumpCondition::Always(target) => f.write_fmt(format_args!("{:?}", target)),
             JumpCondition::NotCarry => f.write_str("NC, a16"),
             JumpCondition::Zero => f.write_str("Z, a16"),
             JumpCondition::Carry => f.write_str("C, a16"),
