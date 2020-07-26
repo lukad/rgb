@@ -206,6 +206,32 @@ impl CPU {
                 self.registers.a = result.wrapping_add(overflow as u8);
                 cycles
             }
+            Instruction::Or(target) => {
+                let mut cycles = 4;
+                let value = match target {
+                    ArithmeticTarget::A => self.registers.a,
+                    ArithmeticTarget::B => self.registers.b,
+                    ArithmeticTarget::C => self.registers.c,
+                    ArithmeticTarget::D => self.registers.d,
+                    ArithmeticTarget::E => self.registers.e,
+                    ArithmeticTarget::H => self.registers.h,
+                    ArithmeticTarget::L => self.registers.l,
+                    ArithmeticTarget::HLA => {
+                        cycles = 8;
+                        self.get_hla()
+                    }
+                    ArithmeticTarget::Immediate => {
+                        cycles = 8;
+                        let value = self.immediate_byte();
+                        next_pc += 1;
+                        value
+                    }
+                };
+                self.registers.a |= value;
+                self.registers.f.clear();
+                self.registers.f.zero = self.registers.a == 0;
+                cycles
+            }
             Instruction::Xor(target) => {
                 let mut cycles = 4;
                 let value = match target {

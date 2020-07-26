@@ -11,6 +11,7 @@ pub enum Instruction {
     Xor(ArithmeticTarget),
     Rra,
     Rla,
+    Or(ArithmeticTarget),
 }
 
 impl Instruction {
@@ -146,6 +147,14 @@ impl Instruction {
             0x8D => Instruction::Adc(ArithmeticTarget::L),
             0x8E => Instruction::Adc(ArithmeticTarget::HLA),
             0x8F => Instruction::Adc(ArithmeticTarget::A),
+            0xB0 => Instruction::Or(ArithmeticTarget::B),
+            0xB1 => Instruction::Or(ArithmeticTarget::C),
+            0xB2 => Instruction::Or(ArithmeticTarget::D),
+            0xB3 => Instruction::Or(ArithmeticTarget::E),
+            0xB4 => Instruction::Or(ArithmeticTarget::H),
+            0xB5 => Instruction::Or(ArithmeticTarget::L),
+            0xB6 => Instruction::Or(ArithmeticTarget::HLA),
+            0xB7 => Instruction::Or(ArithmeticTarget::A),
             0xA8 => Instruction::Xor(ArithmeticTarget::B),
             0xA9 => Instruction::Xor(ArithmeticTarget::C),
             0xAA => Instruction::Xor(ArithmeticTarget::D),
@@ -173,6 +182,7 @@ impl Instruction {
                 LoadByteSource::ImmediateAddress,
             )),
             0xF3 => Instruction::Di,
+            0xF6 => Instruction::Or(ArithmeticTarget::Immediate),
             0xD3 | 0xDB | 0xDC | 0xE3 | 0xE4 | 0xEB | 0xEC | 0xED | 0xF4 | 0xFC | 0xFD => {
                 return None
             }
@@ -303,6 +313,7 @@ impl std::fmt::Debug for Instruction {
             Instruction::Di => f.write_str("DI"),
             Instruction::Adc(target) => f.write_fmt(format_args!("ADC A, {:?}", target)),
             Instruction::Xor(target) => f.write_fmt(format_args!("XOR {:?}", target)),
+            Instruction::Or(target) => f.write_fmt(format_args!("OR {:?}", target)),
         }
     }
 }
