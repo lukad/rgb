@@ -9,6 +9,8 @@ pub enum Instruction {
     Di,
     Adc(ArithmeticTarget),
     Xor(ArithmeticTarget),
+    Rra,
+    Rla,
 }
 
 impl Instruction {
@@ -25,6 +27,8 @@ impl Instruction {
             0x0B => Instruction::Dec(IncDecType::Word(IncDecWordTarget::BC)),
             0x0C => Instruction::Inc(IncDecType::Byte(IncDecByteTarget::C)),
             0x0E => Instruction::Ld(LoadType::Byte(LoadByteTarget::C, LoadByteSource::Immediate)),
+            0x17 => Instruction::Rla,
+            0x1F => Instruction::Rra,
             0x11 => Instruction::Ld(LoadType::Word(LoadWordSource::DE)),
             0x12 => Instruction::Ld(LoadType::Byte(LoadByteTarget::DEA, LoadByteSource::A)),
             0x13 => Instruction::Inc(IncDecType::Word(IncDecWordTarget::DE)),
@@ -291,6 +295,8 @@ impl std::fmt::Debug for Instruction {
             Instruction::Add(target) => f.write_fmt(format_args!("ADD A, {:?}", target)),
             Instruction::Inc(inc_dec_type) => f.write_fmt(format_args!("INC {:?}", inc_dec_type)),
             Instruction::Dec(inc_dec_type) => f.write_fmt(format_args!("DEC {:?}", inc_dec_type)),
+            Instruction::Rra => f.write_str("RRA"),
+            Instruction::Rla => f.write_str("RLA"),
             Instruction::Jp(jump) => f.write_fmt(format_args!("JP {:?}", jump)),
             Instruction::Jr(jump) => f.write_fmt(format_args!("JR {:?}", jump)),
             Instruction::Ld(load_type) => f.write_fmt(format_args!("LD {:?}", load_type)),

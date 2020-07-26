@@ -14,6 +14,15 @@ struct Flags {
     pub carry: bool,
 }
 
+impl Flags {
+    fn clear(&mut self) {
+        self.zero = false;
+        self.subtract = false;
+        self.half_carry = false;
+        self.carry = false;
+    }
+}
+
 impl std::convert::From<Flags> for u8 {
     fn from(flags: Flags) -> u8 {
         (if flags.zero { 1 } else { 0 } << ZERO_FLAG_POSITION)
@@ -304,6 +313,24 @@ impl CPU {
                 *high = (result >> 8) as u8;
                 *low = (result & 0xFF) as u8;
                 8
+            }
+            Instruction::Rra => {
+                let lsb = self.registers.a & 1;
+                self.registers.a >>= 1;
+                self.registers.a &= !(1 << 7);
+                self.registers.a |= (self.registers.f.carry as u8) << 7;
+                self.registers.f.clear();
+                self.registers.f.carry = lsb == 1;
+                4
+            }
+            Instruction::Rla => {
+                let msb = self.registers.a & (1 << 7);
+                self.registers.a <<= 1;
+                self.registers.a &= !1;
+                self.registers.a |= self.registers.f.carry as u8;
+                self.registers.f.clear();
+                self.registers.f.carry = msb == 1;
+                4
             }
             Instruction::Jp(Jump::Always(target)) => {
                 next_pc = match target {
