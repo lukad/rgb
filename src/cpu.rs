@@ -130,24 +130,49 @@ impl CPU {
         }
     }
 
-    fn get_bca(&mut self) -> u8 {
+    fn get_bca(&self) -> u8 {
         self.bus.read_byte(self.registers.get_bc())
     }
 
-    fn get_dea(&mut self) -> u8 {
+    fn get_dea(&self) -> u8 {
         self.bus.read_byte(self.registers.get_de())
     }
 
-    fn get_hla(&mut self) -> u8 {
+    fn get_hla(&self) -> u8 {
         self.bus.read_byte(self.registers.get_hl())
     }
 
-    fn immediate_byte(&mut self) -> u8 {
+    fn immediate_byte(&self) -> u8 {
         self.bus.read_byte(self.pc.wrapping_add(1))
     }
 
-    fn immediate_word(&mut self) -> u16 {
+    fn immediate_word(&self) -> u16 {
         self.bus.read_word(self.pc.wrapping_add(1))
+    }
+
+    fn get_arithmetic_target(&self, target: ArithmeticTarget) -> (u8, usize, u16) {
+        let mut cycles = 4;
+        let mut consumed_bytes = 0;
+        let value = match target {
+            ArithmeticTarget::A => self.registers.a,
+            ArithmeticTarget::B => self.registers.b,
+            ArithmeticTarget::C => self.registers.c,
+            ArithmeticTarget::D => self.registers.d,
+            ArithmeticTarget::E => self.registers.e,
+            ArithmeticTarget::H => self.registers.h,
+            ArithmeticTarget::L => self.registers.l,
+            ArithmeticTarget::HLA => {
+                cycles = 8;
+                self.get_hla()
+            }
+            ArithmeticTarget::Immediate => {
+                cycles = 8;
+                let value = self.immediate_byte();
+                consumed_bytes = 1;
+                value
+            }
+        };
+        (value, cycles, consumed_bytes)
     }
 
     fn execute(&mut self, instruction: Instruction) -> (u16, usize) {
@@ -155,49 +180,19 @@ impl CPU {
         let cycles = match instruction {
             Instruction::Nop => 4,
             Instruction::Add(target) => {
-                let mut cycles = 4;
-                let value = match target {
-                    ArithmeticTarget::A => self.registers.a,
-                    ArithmeticTarget::B => self.registers.b,
-                    ArithmeticTarget::C => self.registers.c,
-                    ArithmeticTarget::D => self.registers.d,
-                    ArithmeticTarget::E => self.registers.e,
-                    ArithmeticTarget::H => self.registers.h,
-                    ArithmeticTarget::L => self.registers.l,
-                    ArithmeticTarget::HLA => self.bus.read_byte(self.registers.get_hl()),
-                    ArithmeticTarget::Immediate => {
-                        let value = self.bus.read_byte(self.pc);
-                        next_pc = next_pc.wrapping_add(1);
-                        cycles = 8;
-                        value
-                    }
-                };
+                let (value, cycles, consumed_bytes) = self.get_arithmetic_target(target);
+                next_pc += consumed_bytes;
                 let (result, overflow) = self.registers.a.overflowing_add(value);
                 self.registers.f.zero = result == 0;
                 self.registers.f.subtract = false;
-                self.registers.f.carry = overflow;
                 self.registers.f.half_carry = (self.registers.a & 0xF) + (result & 0xF) > 0xF;
+                self.registers.f.carry = overflow;
                 self.registers.a = result;
                 cycles
             }
             Instruction::Adc(target) => {
-                let mut cycles = 4;
-                let value = match target {
-                    ArithmeticTarget::A => self.registers.a,
-                    ArithmeticTarget::B => self.registers.b,
-                    ArithmeticTarget::C => self.registers.c,
-                    ArithmeticTarget::D => self.registers.d,
-                    ArithmeticTarget::E => self.registers.e,
-                    ArithmeticTarget::H => self.registers.h,
-                    ArithmeticTarget::L => self.registers.l,
-                    ArithmeticTarget::HLA => self.bus.read_byte(self.registers.get_hl()),
-                    ArithmeticTarget::Immediate => {
-                        let value = self.bus.read_byte(self.pc);
-                        next_pc = next_pc.wrapping_add(1);
-                        cycles = 8;
-                        value
-                    }
-                };
+                let (value, cycles, consumed_bytes) = self.get_arithmetic_target(target);
+                next_pc += consumed_bytes;
                 let (result, overflow) = self.registers.a.overflowing_add(value);
                 self.registers.f.zero = result == 0;
                 self.registers.f.subtract = false;
@@ -207,57 +202,31 @@ impl CPU {
                 cycles
             }
             Instruction::Or(target) => {
-                let mut cycles = 4;
-                let value = match target {
-                    ArithmeticTarget::A => self.registers.a,
-                    ArithmeticTarget::B => self.registers.b,
-                    ArithmeticTarget::C => self.registers.c,
-                    ArithmeticTarget::D => self.registers.d,
-                    ArithmeticTarget::E => self.registers.e,
-                    ArithmeticTarget::H => self.registers.h,
-                    ArithmeticTarget::L => self.registers.l,
-                    ArithmeticTarget::HLA => {
-                        cycles = 8;
-                        self.get_hla()
-                    }
-                    ArithmeticTarget::Immediate => {
-                        cycles = 8;
-                        let value = self.immediate_byte();
-                        next_pc += 1;
-                        value
-                    }
-                };
+                let (value, cycles, consumed_bytes) = self.get_arithmetic_target(target);
+                next_pc += consumed_bytes;
                 self.registers.a |= value;
                 self.registers.f.clear();
                 self.registers.f.zero = self.registers.a == 0;
                 cycles
             }
             Instruction::Xor(target) => {
-                let mut cycles = 4;
-                let value = match target {
-                    ArithmeticTarget::A => self.registers.a,
-                    ArithmeticTarget::B => self.registers.b,
-                    ArithmeticTarget::C => self.registers.c,
-                    ArithmeticTarget::D => self.registers.d,
-                    ArithmeticTarget::E => self.registers.e,
-                    ArithmeticTarget::H => self.registers.h,
-                    ArithmeticTarget::L => self.registers.l,
-                    ArithmeticTarget::HLA => {
-                        cycles = 8;
-                        self.get_hla()
-                    }
-                    ArithmeticTarget::Immediate => {
-                        cycles = 8;
-                        let value = self.immediate_byte();
-                        next_pc += 1;
-                        value
-                    }
-                };
+                let (value, cycles, consumed_bytes) = self.get_arithmetic_target(target);
+                next_pc += consumed_bytes;
                 self.registers.a ^= value;
                 self.registers.f.zero = self.registers.a == 0;
                 self.registers.f.subtract = false;
                 self.registers.f.half_carry = false;
                 self.registers.f.carry = false;
+                cycles
+            }
+            Instruction::Cp(target) => {
+                let (value, cycles, consumed_bytes) = self.get_arithmetic_target(target);
+                next_pc += consumed_bytes;
+                self.registers.f.zero = value == self.registers.a;
+                self.registers.f.subtract = true;
+                self.registers.f.half_carry =
+                    (self.registers.a & 0xF) + (self.registers.a.wrapping_sub(value) & 0xF) > 0xF;
+                self.registers.f.carry = self.registers.a < value;
                 cycles
             }
             Instruction::Inc(IncDecType::Byte(target)) => {

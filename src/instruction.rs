@@ -12,6 +12,7 @@ pub enum Instruction {
     Rra,
     Rla,
     Or(ArithmeticTarget),
+    Cp(ArithmeticTarget),
 }
 
 impl Instruction {
@@ -147,14 +148,6 @@ impl Instruction {
             0x8D => Instruction::Adc(ArithmeticTarget::L),
             0x8E => Instruction::Adc(ArithmeticTarget::HLA),
             0x8F => Instruction::Adc(ArithmeticTarget::A),
-            0xB0 => Instruction::Or(ArithmeticTarget::B),
-            0xB1 => Instruction::Or(ArithmeticTarget::C),
-            0xB2 => Instruction::Or(ArithmeticTarget::D),
-            0xB3 => Instruction::Or(ArithmeticTarget::E),
-            0xB4 => Instruction::Or(ArithmeticTarget::H),
-            0xB5 => Instruction::Or(ArithmeticTarget::L),
-            0xB6 => Instruction::Or(ArithmeticTarget::HLA),
-            0xB7 => Instruction::Or(ArithmeticTarget::A),
             0xA8 => Instruction::Xor(ArithmeticTarget::B),
             0xA9 => Instruction::Xor(ArithmeticTarget::C),
             0xAA => Instruction::Xor(ArithmeticTarget::D),
@@ -163,6 +156,22 @@ impl Instruction {
             0xAD => Instruction::Xor(ArithmeticTarget::L),
             0xAE => Instruction::Xor(ArithmeticTarget::HLA),
             0xAF => Instruction::Xor(ArithmeticTarget::A),
+            0xB0 => Instruction::Or(ArithmeticTarget::B),
+            0xB1 => Instruction::Or(ArithmeticTarget::C),
+            0xB2 => Instruction::Or(ArithmeticTarget::D),
+            0xB3 => Instruction::Or(ArithmeticTarget::E),
+            0xB4 => Instruction::Or(ArithmeticTarget::H),
+            0xB5 => Instruction::Or(ArithmeticTarget::L),
+            0xB6 => Instruction::Or(ArithmeticTarget::HLA),
+            0xB7 => Instruction::Or(ArithmeticTarget::A),
+            0xB8 => Instruction::Cp(ArithmeticTarget::B),
+            0xB9 => Instruction::Cp(ArithmeticTarget::C),
+            0xBA => Instruction::Cp(ArithmeticTarget::D),
+            0xBB => Instruction::Cp(ArithmeticTarget::E),
+            0xBC => Instruction::Cp(ArithmeticTarget::H),
+            0xBD => Instruction::Cp(ArithmeticTarget::L),
+            0xBE => Instruction::Cp(ArithmeticTarget::HLA),
+            0xBF => Instruction::Cp(ArithmeticTarget::A),
             0xC2 => Instruction::Jp(Jump::Conditional(JumpCondition::NotZero)),
             0xC3 => Instruction::Jp(Jump::Always(JumpTarget::Immediate)),
             0xC6 => Instruction::Add(ArithmeticTarget::Immediate),
@@ -171,18 +180,19 @@ impl Instruction {
             0xD2 => Instruction::Jp(Jump::Conditional(JumpCondition::NotCarry)),
             0xDA => Instruction::Jp(Jump::Conditional(JumpCondition::Carry)),
             0xE9 => Instruction::Jp(Jump::Always(JumpTarget::HLA)),
-            0xF2 => Instruction::Ld(LoadType::Byte(LoadByteTarget::A, LoadByteSource::CA)),
             0xEA => Instruction::Ld(LoadType::Byte(
                 LoadByteTarget::ImmediateAddress,
                 LoadByteSource::A,
             )),
             0xEE => Instruction::Xor(ArithmeticTarget::Immediate),
+            0xF2 => Instruction::Ld(LoadType::Byte(LoadByteTarget::A, LoadByteSource::CA)),
+            0xF3 => Instruction::Di,
+            0xF6 => Instruction::Or(ArithmeticTarget::Immediate),
             0xFA => Instruction::Ld(LoadType::Byte(
                 LoadByteTarget::A,
                 LoadByteSource::ImmediateAddress,
             )),
-            0xF3 => Instruction::Di,
-            0xF6 => Instruction::Or(ArithmeticTarget::Immediate),
+            0xFE => Instruction::Cp(ArithmeticTarget::Immediate),
             0xD3 | 0xDB | 0xDC | 0xE3 | 0xE4 | 0xEB | 0xEC | 0xED | 0xF4 | 0xFC | 0xFD => {
                 return None
             }
@@ -314,6 +324,7 @@ impl std::fmt::Debug for Instruction {
             Instruction::Adc(target) => f.write_fmt(format_args!("ADC A, {:?}", target)),
             Instruction::Xor(target) => f.write_fmt(format_args!("XOR {:?}", target)),
             Instruction::Or(target) => f.write_fmt(format_args!("OR {:?}", target)),
+            Instruction::Cp(target) => f.write_fmt(format_args!("CP {:?}", target)),
         }
     }
 }
