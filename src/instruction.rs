@@ -17,7 +17,7 @@ pub enum Instruction {
 }
 
 impl Instruction {
-    pub fn from_byte(byte: u8) -> Option<Self> {
+    pub fn from_byte(byte: u8) -> Result<Self, String> {
         let ins = match byte {
             0x00 => Instruction::Nop,
             0x01 => Instruction::Ld(LoadType::Word(WordRegister::BC)),
@@ -30,6 +30,7 @@ impl Instruction {
             0x0A => Instruction::Ld(LoadType::Byte(LoadByteTarget::A, LoadByteSource::BCA)),
             0x0B => Instruction::Dec(IncDecType::Word(IncDecWordTarget::BC)),
             0x0C => Instruction::Inc(IncDecType::Byte(IncDecByteTarget::C)),
+            0x0D => Instruction::Dec(IncDecType::Byte(IncDecByteTarget::C)),
             0x0E => Instruction::Ld(LoadType::Byte(LoadByteTarget::C, LoadByteSource::Immediate)),
             0x17 => Instruction::Rla,
             0x1F => Instruction::Rra,
@@ -44,6 +45,7 @@ impl Instruction {
             0x1A => Instruction::Ld(LoadType::Byte(LoadByteTarget::A, LoadByteSource::DEA)),
             0x1B => Instruction::Dec(IncDecType::Word(IncDecWordTarget::DE)),
             0x1C => Instruction::Inc(IncDecType::Byte(IncDecByteTarget::E)),
+            0x1D => Instruction::Dec(IncDecType::Byte(IncDecByteTarget::E)),
             0x1E => Instruction::Ld(LoadType::Byte(LoadByteTarget::E, LoadByteSource::Immediate)),
             0x20 => Instruction::Jr(JumpRelative::Conditional(JumpCondition::NotZero)),
             0x21 => Instruction::Ld(LoadType::Word(WordRegister::HL)),
@@ -57,6 +59,7 @@ impl Instruction {
             0x2A => Instruction::Ld(LoadType::Byte(LoadByteTarget::A, LoadByteSource::HLIA)),
             0x2B => Instruction::Dec(IncDecType::Word(IncDecWordTarget::HL)),
             0x2C => Instruction::Inc(IncDecType::Byte(IncDecByteTarget::L)),
+            0x2D => Instruction::Dec(IncDecType::Byte(IncDecByteTarget::L)),
             0x2E => Instruction::Ld(LoadType::Byte(LoadByteTarget::L, LoadByteSource::Immediate)),
             0x30 => Instruction::Jr(JumpRelative::Conditional(JumpCondition::NotCarry)),
             0x31 => Instruction::Ld(LoadType::Word(WordRegister::SP)),
@@ -73,6 +76,7 @@ impl Instruction {
             0x3A => Instruction::Ld(LoadType::Byte(LoadByteTarget::A, LoadByteSource::HLDA)),
             0x3B => Instruction::Dec(IncDecType::Word(IncDecWordTarget::SP)),
             0x3C => Instruction::Inc(IncDecType::Byte(IncDecByteTarget::A)),
+            0x3D => Instruction::Dec(IncDecType::Byte(IncDecByteTarget::A)),
             0x3E => Instruction::Ld(LoadType::Byte(LoadByteTarget::A, LoadByteSource::Immediate)),
             0x40 => Instruction::Ld(LoadType::Byte(LoadByteTarget::B, LoadByteSource::B)),
             0x41 => Instruction::Ld(LoadType::Byte(LoadByteTarget::B, LoadByteSource::C)),
@@ -183,38 +187,35 @@ impl Instruction {
             0xCA => Instruction::Jp(Jump::Conditional(JumpCondition::Zero)),
             0xCE => Instruction::Adc(ArithmeticTarget::Immediate),
             0xD2 => Instruction::Jp(Jump::Conditional(JumpCondition::NotCarry)),
-            0xD3 => return None,
+            0xD3 => return Err(format!("illegal instruction: {:02X}", byte)),
             0xDA => Instruction::Jp(Jump::Conditional(JumpCondition::Carry)),
-            0xDB => return None,
-            0xDC => return None,
-            0xE3 => return None,
-            0xE4 => return None,
+            0xDB => return Err(format!("illegal instruction: {:02X}", byte)),
+            0xDC => return Err(format!("illegal instruction: {:02X}", byte)),
+            0xE3 => return Err(format!("illegal instruction: {:02X}", byte)),
+            0xE4 => return Err(format!("illegal instruction: {:02X}", byte)),
             0xE9 => Instruction::Jp(Jump::Always(JumpTarget::HLA)),
             0xEA => Instruction::Ld(LoadType::Byte(
                 LoadByteTarget::ImmediateAddress,
                 LoadByteSource::A,
             )),
-            0xEB => return None,
+            0xEB => return Err(format!("illegal instruction: {:02X}", byte)),
             0xEE => Instruction::Xor(ArithmeticTarget::Immediate),
-            0xEC => return None,
-            0xED => return None,
+            0xEC => return Err(format!("illegal instruction: {:02X}", byte)),
+            0xED => return Err(format!("illegal instruction: {:02X}", byte)),
             0xF2 => Instruction::Ld(LoadType::Byte(LoadByteTarget::A, LoadByteSource::CA)),
             0xF3 => Instruction::Di,
-            0xF4 => return None,
+            0xF4 => return Err(format!("illegal instruction: {:02X}", byte)),
             0xF6 => Instruction::Or(ArithmeticTarget::Immediate),
             0xFA => Instruction::Ld(LoadType::Byte(
                 LoadByteTarget::A,
                 LoadByteSource::ImmediateAddress,
             )),
-            0xFC => return None,
-            0xFD => return None,
+            0xFC => return Err(format!("illegal instruction: {:02X}", byte)),
+            0xFD => return Err(format!("illegal instruction: {:02X}", byte)),
             0xFE => Instruction::Cp(ArithmeticTarget::Immediate),
-            _ => {
-                error!("Could not decode instruction: {:#04X}", byte);
-                todo!("Could not decode instruction: {:#04X}", byte)
-            }
+            _ => return Err(format!("could not decode instruction: {:#02X}", byte)),
         };
-        Some(ins)
+        Ok(ins)
     }
 }
 

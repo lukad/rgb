@@ -7,6 +7,7 @@ use crate::instruction::*;
 use crate::memory_bus::MemoryBus;
 use std::io;
 
+#[derive(Clone)]
 struct Flags {
     pub zero: bool,
     pub subtract: bool,
@@ -54,6 +55,17 @@ struct Registers {
     pub l: u8,
 }
 
+impl std::fmt::Debug for Registers {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Registers")
+            .field("af", &format_args!("{:04X}", self.get_af()))
+            .field("bc", &format_args!("{:04X}", self.get_bc()))
+            .field("de", &format_args!("{:04X}", self.get_de()))
+            .field("hl", &format_args!("{:04X}", self.get_hl()))
+            .finish()
+    }
+}
+
 impl Registers {
     fn new() -> Self {
         Self {
@@ -68,12 +80,16 @@ impl Registers {
         }
     }
 
+    fn get_af(&self) -> u16 {
+        ((self.a as u16) << 8) | (u8::from(self.f.clone()) as u16)
+    }
+
     fn get_bc(&self) -> u16 {
-        ((self.h as u16) << 8) | (self.l as u16)
+        ((self.b as u16) << 8) | (self.c as u16)
     }
 
     fn get_de(&self) -> u16 {
-        ((self.h as u16) << 8) | (self.l as u16)
+        ((self.d as u16) << 8) | (self.e as u16)
     }
 
     fn get_hl(&self) -> u16 {
@@ -117,16 +133,17 @@ impl CPU {
 
     pub fn step(&mut self) -> Result<(), String> {
         let byte = self.bus.read_byte(self.pc);
-        if let Some(instruction) = Instruction::from_byte(byte) {
-            trace!("{:#06X}: {:?}", self.pc, instruction);
-            let (new_pc, _cycles) = self.execute(instruction);
-            self.pc = new_pc;
-            Ok(())
-        } else {
-            Err(format!(
-                "{:#06X}: {:#6X} - illegal instruction",
-                self.pc, byte
-            ))
+        match Instruction::from_byte(byte) {
+            Ok(instruction) => {
+                trace!("{:04X}: {:?}", self.pc, instruction);
+                let (new_pc, _cycles) = self.execute(instruction);
+                self.pc = new_pc;
+                Ok(())
+            }
+            Err(err) => {
+                debug!("{:?}", self.registers);
+                Err(err)
+            }
         }
     }
 
@@ -302,7 +319,8 @@ impl CPU {
                 let result = register.wrapping_sub(1);
                 self.registers.f.zero = result == 0;
                 self.registers.f.subtract = true;
-                self.registers.f.half_carry = (*register & 0xF) + (result & 0xF) & 0x10 != 0;
+                self.registers.f.half_carry =
+                    ((*register & 0xF) as i8) - ((result & 0xF) as i8) < 0;
                 *register = result;
                 cycles
             }
@@ -375,7 +393,9 @@ impl CPU {
                     JumpCondition::NotZero => !self.registers.f.zero,
                 };
                 if condition {
-                    next_pc = next_pc.wrapping_add(self.bus.read_byte(next_pc) as u16);
+                    let relative_addr = self.bus.read_byte(next_pc) as i8;
+                    next_pc = next_pc.wrapping_add(1);
+                    next_pc = (next_pc as i16).wrapping_add(relative_addr as i16) as u16;
                     12
                 } else {
                     next_pc = next_pc.wrapping_add(1);
@@ -439,11 +459,11 @@ impl CPU {
                 let target = match byte_target {
                     LoadByteTarget::A => &mut self.registers.a,
                     LoadByteTarget::B => &mut self.registers.b,
-                    LoadByteTarget::C => &mut self.registers.b,
-                    LoadByteTarget::D => &mut self.registers.b,
-                    LoadByteTarget::E => &mut self.registers.b,
-                    LoadByteTarget::H => &mut self.registers.b,
-                    LoadByteTarget::L => &mut self.registers.b,
+                    LoadByteTarget::C => &mut self.registers.c,
+                    LoadByteTarget::D => &mut self.registers.d,
+                    LoadByteTarget::E => &mut self.registers.e,
+                    LoadByteTarget::H => &mut self.registers.h,
+                    LoadByteTarget::L => &mut self.registers.l,
                     LoadByteTarget::ImmediateAddress => {
                         cycles += 12;
                         let addr = self.immediate_word();

@@ -140,6 +140,9 @@ impl MemoryBus {
 
     pub fn get_mut_byte(&mut self, address: u16) -> &mut u8 {
         let addr = address as usize;
+        if addr == 0x021A {
+            debug!("DAFUQ");
+        }
         match addr & 0xF000 {
             0x0000 => {
                 // TODO: check for bios
