@@ -41,7 +41,7 @@ impl MemoryBus {
         bus.write_byte(0xFF23, 0xBF);
         bus.write_byte(0xFF24, 0x77);
         bus.write_byte(0xFF25, 0xF3);
-        // bus.write_byte(0xFF26, bus.read_byte(0xF1).wrapping_sub(0xGB));
+        bus.write_byte(0xFF26, 0xF1);
         bus.write_byte(0xFF26, 0xF0);
         bus.write_byte(0xFF40, 0x91);
         bus.write_byte(0xFF42, 0x00);
