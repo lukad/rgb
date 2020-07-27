@@ -190,6 +190,20 @@ impl CPU {
                 self.registers.a = result;
                 cycles
             }
+            Instruction::AddHl(target) => {
+                let value = match target {
+                    WordRegister::BC => self.registers.get_bc(),
+                    WordRegister::DE => self.registers.get_de(),
+                    WordRegister::HL => self.registers.get_hl(),
+                    WordRegister::SP => self.sp,
+                };
+                let hl = self.registers.get_hl();
+                let (result, overflow) = hl.overflowing_add(value);
+                self.registers.f.subtract = false;
+                self.registers.f.half_carry = (hl & 0xFF) + (result & 0xFF) > 0xFF;
+                self.registers.f.carry = overflow;
+                8
+            }
             Instruction::Adc(target) => {
                 let (value, cycles, consumed_bytes) = self.get_arithmetic_target(target);
                 next_pc += consumed_bytes;
@@ -472,10 +486,10 @@ impl CPU {
                 let value = self.immediate_word();
                 next_pc += 2;
                 match source {
-                    LoadWordSource::BC => self.registers.set_bc(value),
-                    LoadWordSource::DE => self.registers.set_de(value),
-                    LoadWordSource::HL => self.registers.set_hl(value),
-                    LoadWordSource::SP => self.sp = value,
+                    WordRegister::BC => self.registers.set_bc(value),
+                    WordRegister::DE => self.registers.set_de(value),
+                    WordRegister::HL => self.registers.set_hl(value),
+                    WordRegister::SP => self.sp = value,
                 }
                 12
             }

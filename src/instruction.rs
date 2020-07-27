@@ -1,6 +1,7 @@
 pub enum Instruction {
     Nop,
     Add(ArithmeticTarget),
+    AddHl(WordRegister),
     Inc(IncDecType),
     Dec(IncDecType),
     Jp(Jump),
@@ -19,43 +20,46 @@ impl Instruction {
     pub fn from_byte(byte: u8) -> Option<Self> {
         let ins = match byte {
             0x00 => Instruction::Nop,
-            0x01 => Instruction::Ld(LoadType::Word(LoadWordSource::BC)),
+            0x01 => Instruction::Ld(LoadType::Word(WordRegister::BC)),
             0x02 => Instruction::Ld(LoadType::Byte(LoadByteTarget::BCA, LoadByteSource::A)),
             0x03 => Instruction::Inc(IncDecType::Word(IncDecWordTarget::BC)),
             0x04 => Instruction::Inc(IncDecType::Byte(IncDecByteTarget::B)),
             0x05 => Instruction::Dec(IncDecType::Byte(IncDecByteTarget::B)),
             0x06 => Instruction::Ld(LoadType::Byte(LoadByteTarget::B, LoadByteSource::Immediate)),
+            0x09 => Instruction::AddHl(WordRegister::BC),
             0x0A => Instruction::Ld(LoadType::Byte(LoadByteTarget::A, LoadByteSource::BCA)),
             0x0B => Instruction::Dec(IncDecType::Word(IncDecWordTarget::BC)),
             0x0C => Instruction::Inc(IncDecType::Byte(IncDecByteTarget::C)),
             0x0E => Instruction::Ld(LoadType::Byte(LoadByteTarget::C, LoadByteSource::Immediate)),
             0x17 => Instruction::Rla,
             0x1F => Instruction::Rra,
-            0x11 => Instruction::Ld(LoadType::Word(LoadWordSource::DE)),
+            0x11 => Instruction::Ld(LoadType::Word(WordRegister::DE)),
             0x12 => Instruction::Ld(LoadType::Byte(LoadByteTarget::DEA, LoadByteSource::A)),
             0x13 => Instruction::Inc(IncDecType::Word(IncDecWordTarget::DE)),
             0x14 => Instruction::Inc(IncDecType::Byte(IncDecByteTarget::D)),
             0x15 => Instruction::Dec(IncDecType::Byte(IncDecByteTarget::D)),
             0x16 => Instruction::Ld(LoadType::Byte(LoadByteTarget::D, LoadByteSource::Immediate)),
             0x18 => Instruction::Jr(JumpRelative::Always),
+            0x19 => Instruction::AddHl(WordRegister::DE),
             0x1A => Instruction::Ld(LoadType::Byte(LoadByteTarget::A, LoadByteSource::DEA)),
             0x1B => Instruction::Dec(IncDecType::Word(IncDecWordTarget::DE)),
             0x1C => Instruction::Inc(IncDecType::Byte(IncDecByteTarget::E)),
             0x1E => Instruction::Ld(LoadType::Byte(LoadByteTarget::E, LoadByteSource::Immediate)),
             0x20 => Instruction::Jr(JumpRelative::Conditional(JumpCondition::NotZero)),
-            0x21 => Instruction::Ld(LoadType::Word(LoadWordSource::HL)),
+            0x21 => Instruction::Ld(LoadType::Word(WordRegister::HL)),
             0x22 => Instruction::Ld(LoadType::Byte(LoadByteTarget::HLIA, LoadByteSource::A)),
             0x23 => Instruction::Inc(IncDecType::Word(IncDecWordTarget::HL)),
             0x24 => Instruction::Inc(IncDecType::Byte(IncDecByteTarget::H)),
             0x25 => Instruction::Dec(IncDecType::Byte(IncDecByteTarget::H)),
             0x26 => Instruction::Ld(LoadType::Byte(LoadByteTarget::H, LoadByteSource::Immediate)),
             0x28 => Instruction::Jr(JumpRelative::Conditional(JumpCondition::Zero)),
+            0x29 => Instruction::AddHl(WordRegister::HL),
             0x2A => Instruction::Ld(LoadType::Byte(LoadByteTarget::A, LoadByteSource::HLIA)),
             0x2B => Instruction::Dec(IncDecType::Word(IncDecWordTarget::HL)),
             0x2C => Instruction::Inc(IncDecType::Byte(IncDecByteTarget::L)),
             0x2E => Instruction::Ld(LoadType::Byte(LoadByteTarget::L, LoadByteSource::Immediate)),
             0x30 => Instruction::Jr(JumpRelative::Conditional(JumpCondition::NotCarry)),
-            0x31 => Instruction::Ld(LoadType::Word(LoadWordSource::SP)),
+            0x31 => Instruction::Ld(LoadType::Word(WordRegister::SP)),
             0x32 => Instruction::Ld(LoadType::Byte(LoadByteTarget::HLDA, LoadByteSource::A)),
             0x33 => Instruction::Inc(IncDecType::Word(IncDecWordTarget::SP)),
             0x34 => Instruction::Inc(IncDecType::Byte(IncDecByteTarget::HLA)),
@@ -65,6 +69,7 @@ impl Instruction {
                 LoadByteSource::Immediate,
             )),
             0x38 => Instruction::Jr(JumpRelative::Conditional(JumpCondition::Carry)),
+            0x39 => Instruction::AddHl(WordRegister::SP),
             0x3A => Instruction::Ld(LoadType::Byte(LoadByteTarget::A, LoadByteSource::HLDA)),
             0x3B => Instruction::Dec(IncDecType::Word(IncDecWordTarget::SP)),
             0x3C => Instruction::Inc(IncDecType::Byte(IncDecByteTarget::A)),
@@ -272,7 +277,7 @@ pub enum JumpTarget {
 
 pub enum LoadType {
     Byte(LoadByteTarget, LoadByteSource),
-    Word(LoadWordSource),
+    Word(WordRegister),
 }
 
 pub enum LoadByteSource {
@@ -309,7 +314,7 @@ pub enum LoadByteTarget {
     HLDA,
 }
 
-pub enum LoadWordSource {
+pub enum WordRegister {
     BC,
     DE,
     HL,
@@ -321,6 +326,7 @@ impl std::fmt::Debug for Instruction {
         match self {
             Instruction::Nop => f.write_str("NOP"),
             Instruction::Add(target) => f.write_fmt(format_args!("ADD A, {:?}", target)),
+            Instruction::AddHl(target) => f.write_fmt(format_args!("ADD HL, {:?}", target)),
             Instruction::Inc(inc_dec_type) => f.write_fmt(format_args!("INC {:?}", inc_dec_type)),
             Instruction::Dec(inc_dec_type) => f.write_fmt(format_args!("DEC {:?}", inc_dec_type)),
             Instruction::Rra => f.write_str("RRA"),
@@ -467,13 +473,13 @@ impl std::fmt::Debug for LoadByteTarget {
     }
 }
 
-impl std::fmt::Debug for LoadWordSource {
+impl std::fmt::Debug for WordRegister {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let value = match self {
-            LoadWordSource::BC => "BC",
-            LoadWordSource::DE => "DE",
-            LoadWordSource::HL => "HL",
-            LoadWordSource::SP => "SP",
+            WordRegister::BC => "BC",
+            WordRegister::DE => "DE",
+            WordRegister::HL => "HL",
+            WordRegister::SP => "SP",
         };
         f.write_str(value)
     }
