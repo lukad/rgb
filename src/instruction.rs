@@ -178,24 +178,32 @@ impl Instruction {
             0xCA => Instruction::Jp(Jump::Conditional(JumpCondition::Zero)),
             0xCE => Instruction::Adc(ArithmeticTarget::Immediate),
             0xD2 => Instruction::Jp(Jump::Conditional(JumpCondition::NotCarry)),
+            0xD3 => return None,
             0xDA => Instruction::Jp(Jump::Conditional(JumpCondition::Carry)),
+            0xDB => return None,
+            0xDC => return None,
+            0xE3 => return None,
+            0xE4 => return None,
             0xE9 => Instruction::Jp(Jump::Always(JumpTarget::HLA)),
             0xEA => Instruction::Ld(LoadType::Byte(
                 LoadByteTarget::ImmediateAddress,
                 LoadByteSource::A,
             )),
+            0xEB => return None,
             0xEE => Instruction::Xor(ArithmeticTarget::Immediate),
+            0xEC => return None,
+            0xED => return None,
             0xF2 => Instruction::Ld(LoadType::Byte(LoadByteTarget::A, LoadByteSource::CA)),
             0xF3 => Instruction::Di,
+            0xF4 => return None,
             0xF6 => Instruction::Or(ArithmeticTarget::Immediate),
             0xFA => Instruction::Ld(LoadType::Byte(
                 LoadByteTarget::A,
                 LoadByteSource::ImmediateAddress,
             )),
+            0xFC => return None,
+            0xFD => return None,
             0xFE => Instruction::Cp(ArithmeticTarget::Immediate),
-            0xD3 | 0xDB | 0xDC | 0xE3 | 0xE4 | 0xEB | 0xEC | 0xED | 0xF4 | 0xFC | 0xFD => {
-                return None
-            }
             _ => {
                 error!("Could not decode instruction: {:#04X}", byte);
                 todo!("Could not decode instruction: {:#04X}", byte)
